@@ -1,0 +1,107 @@
+---
+title: "Prediction Assignment"
+output: html_document
+---
+**Executive Summary**
+
+This assignment project will create a predictive model by training a dateset and running it against a testing set.
+
+The training dataset is almost 20,000 observations of accelerometer measurements to evaluate the correctnesss of barbell lifts. A random forest model is created and is expected to predict the correctnesss of lifts.
+
+**Load Training and Testing Files**
+
+First, load the model libraries.
+```{r, echo=TRUE, message=FALSE}
+library(caret)
+library(randomForest)
+```
+
+Datasets are loaded with NAs inserted for empty values. Download links are in the Sources section at the end of the document.
+```{r}
+pml.training <- read.csv("~/Desktop/pml-training.csv", header=TRUE, na.strings = c("NA", ""))
+pml.testing <- read.csv("~/Desktop/pml-testing.csv", header=TRUE, na.strings = c("NA", ""))
+```
+
+**Clean the Datasets**
+
+The original training set has 160 variables.
+```{r}
+dim(pml.training)
+dim(pml.testing)
+```
+
+Upon inspection of the training data with `View(training)`, many columns have significant NAs. For the model, these variables will be removed before building the model.
+
+In addition, the first 7 columns contain variables not related to the prediction, such as timestamps and names.
+```{r}
+training <- pml.training[, -c(1:7)]
+training <- training[, colSums(is.na(training)) == 0]
+testing <- pml.testing[, -c(1:7)]
+testing <- testing[, colSums(is.na(testing)) == 0]
+```
+
+This processing reduces the training set variables down from 160 to 53.
+```{r}
+dim(training)
+```
+
+**Partition Training Set for Validation**
+
+Now, the training dataset will be partitioned at 70/30 to create a validation set. The `classe` variable contains the manner in which the exercise was conducted.
+```{r}
+inTrain <- createDataPartition(training$classe, p=0.7, list=FALSE)
+subTrain <- training[inTrain,]
+validTrain <- training[-inTrain,]
+```
+
+**Run Random Forest Model**
+
+We will try to a random forest model. This should provide a good balance of accuracy to performance.
+```{r}
+model <- randomForest(classe ~., data=subTrain, importance=TRUE)
+```
+
+A quick plot of the the model will show the error rate over number of trees.
+```{r}
+plot(model)
+```
+
+**Run Model on Validation Set**
+
+The model will now be run on our validation set and will generate a confusion matrix to check how well it perforrms on the validation partition.
+```{r}
+predictValid <- predict(model, newdata=validTrain)
+confusionMatrix(predictValid, validTrain$classe)
+```
+
+Model accuracy is above 99%, so it is expected the out-of-sample error should be less than 1%.
+
+**Prediction**
+
+Now, we will create a vector of model outputs in order to predict the barbell correction on 20 observations from the `testing` dataset.
+```{r}
+answers <- predict(model, testing)
+answers <- as.vector(answers)
+answers
+```
+
+The `answers` vector can now be submitted for grading.
+
+**Sources**
+
+Source for data comes from:
+
+Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable Computing: Accelerometers' Data Classification of Body Postures and Movements. Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. , pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9. DOI: 10.1007/978-3-642-34459-6_6. 
+http://groupware.les.inf.puc-rio.br/har
+
+Data download links:
+
+Training dataset https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+Testing dataset https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+ 
+ 
+
+
+
+
